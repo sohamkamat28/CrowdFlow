@@ -1,0 +1,42 @@
+name: Test macOS and Windows setup
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            python: .venv/bin/python
+          - os: windows-latest
+            python: .venv/Scripts/python.exe
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install with the macOS setup script
+        if: runner.os == 'macOS'
+        run: bash setup.sh
+      - name: Install with the Windows setup script
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: call setup.bat < NUL
+      - name: Install test dependencies
+        shell: bash
+        run: ${{ matrix.python }} -m pip install -r requirements-dev.txt
+      - name: Test algorithms, ML, simulation, and API
+        shell: bash
+        run: ${{ matrix.python }} -m pytest -q
+      - name: Test server startup and restart
+        shell: bash
+        run: ${{ matrix.python }} tests/check_restart.py
